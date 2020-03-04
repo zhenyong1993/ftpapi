@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <regex>
+#include <regex.h>
 #include "json.h"
 #include "interface.h"
 using namespace std;
@@ -69,6 +70,16 @@ int _listDir(void *handle,const   string&dir,string& content)
     string destJson = "";
     Json::Value JsonRoot;
 
+    regex_t reg;
+    const char* patten = "([^ ]+) +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([^ ]+) +([^ ]+) +([^ ]+) +([^ ]+) *";
+    //const char* patten = "(dr[^\\s]+)\\s+([\\d]+)\\s+.*";
+    if(0 > regcomp(&reg, patten, REG_EXTENDED))
+    {
+        cout << "reg comp fail" << endl;
+        return -1;
+    }
+    char match[100]="hello";
+    string des[10];
     while (!ifs.eof())
     {
 
@@ -78,32 +89,41 @@ int _listDir(void *handle,const   string&dir,string& content)
         // content += "\n";
 
         tmp = line;
-        smatch res;
-        bool flag = regex_match(tmp, res, regex("^([^\\s]*)\\s*([\\d]*)\\s*([^\\s]*)\\s*([^\\s]*)\\s*([\\d]*)\\s*([^\\s]*)\\s*([^\\s]*)\\s*([^\\s]*)\\s*([^\\s]*)\\s*$"));
-        if(flag)
+        //smatch res;
+        int nmatch = 10;
+        regmatch_t matchptr[10];
+        int err = regexec (&reg, tmp.c_str(), nmatch, matchptr, REG_NOTBOL);
+        if(err == REG_NOMATCH)
         {
+            cout << "no match " << endl;
+            continue;
+//            return -1;
+        }
+        for(int i=0;i<10 && matchptr[i].rm_so!=-1;i++){
+                int len = matchptr[i].rm_eo-matchptr[i].rm_so;
+                cout << "rm_so: " << matchptr[i].rm_so << " rm_eo: " << matchptr[i].rm_eo << endl;
+                if(len){
+                        memset(match,'\0',sizeof(match));
+                        strncpy(match,tmp.c_str()+matchptr[i].rm_so,len);
+                        des[i]=match;
+                        printf("match %d is %s\n",i,match);
+                }
+        }
             //fill to json
             Json::Value filename;
-            string chTime = string(res[6]) + " " + string(res[7]) + " " + string(res[8]);
+            string chTime = des[6] + " " + des[7] + " " + des[8];
 //            cout << "chTime is " << chTime << endl;
             filename["changeTime"] = Json::Value(chTime.c_str());
             filename["changeTime"] = Json::Value(chTime.c_str());
 
-            filename["name"] = string(res[9]);
-            filename["size"] = string(res[5]);
-            filename["type"] = (string(res[1]).compare(0,1,"d")==0)?"dir":"file";
+            filename["name"] = des[9];
+            filename["size"] = des[5];
+            filename["type"] = (des[1].compare(0,1,"d")==0)?"dir":"file";
 
-            if(!string(res[9]).empty())
-                JsonRoot[res[9]] = filename;
+            if(!des[9].empty())
+                JsonRoot[des[9]] = filename;
             else
                 cout << "empty match, ignore" << endl;
-        }
-        else
-        {
-            //perhaps we need another regex to fit specific content --xzy
-            cout << "match failed" << endl;
-        }
-
     }
     Json::FastWriter writer;
     content = writer.write(JsonRoot);
