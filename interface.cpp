@@ -1,4 +1,5 @@
 #include "interface.h"
+#include <vector>
 //#include "json.h"
 #include <map>
 #include "curl/curl.h"

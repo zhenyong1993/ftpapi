@@ -1,0 +1,1 @@
+g++ -fPIC  -shared -o libftpapi.so ftpapi.cpp interface.cpp -L. -Wl,-rpath=./ -std=c++11 -lpthread -ljsoncpp -fpermissive -DJSON_IS_AMALGAMATION -m32
